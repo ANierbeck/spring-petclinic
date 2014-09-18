@@ -18,6 +18,8 @@ package org.springframework.samples.petclinic.util;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.jmx.export.annotation.ManagedAttribute;
 import org.springframework.jmx.export.annotation.ManagedOperation;
 import org.springframework.jmx.export.annotation.ManagedResource;
@@ -41,7 +43,6 @@ public class CallMonitoringAspect {
     private int callCount = 0;
 
     private long accumulatedCallTime = 0;
-
 
     @ManagedAttribute
     public void setEnabled(boolean enabled) {
