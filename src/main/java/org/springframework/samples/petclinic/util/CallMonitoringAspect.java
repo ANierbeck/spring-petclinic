@@ -44,6 +44,8 @@ public class CallMonitoringAspect {
 
     private long accumulatedCallTime = 0;
 
+	private Logger logger = LoggerFactory.getLogger("API");
+
     @ManagedAttribute
     public void setEnabled(boolean enabled) {
     	this.enabled = enabled;
@@ -84,6 +86,8 @@ public class CallMonitoringAspect {
                 synchronized (this) {
                     this.callCount++;
                     this.accumulatedCallTime += sw.getTotalTimeMillis();
+					logger.info("{} : {}", joinPoint.toShortString(),
+							sw.getTotalTimeMillis());
                 }
             }
         } else {

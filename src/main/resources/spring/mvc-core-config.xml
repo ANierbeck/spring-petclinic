@@ -20,8 +20,8 @@
         <aop:include name="apiMonitor"/>
     </aop:aspectj-autoproxy>
     
-    <bean id="apiMonitor" class="org.springframework.samples.petclinic.util.ApiMonitoringAspect"/>
-
+    <bean id="apiMonitor" class="org.springframework.samples.petclinic.util.ApiMonitoringAspect" />
+	
     <!--
         - POJOs labeled with the @Controller and @Service annotations are auto-detected.
     -->
