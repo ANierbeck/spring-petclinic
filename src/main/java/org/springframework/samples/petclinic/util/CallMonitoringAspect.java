@@ -44,7 +44,7 @@ public class CallMonitoringAspect {
 
     private long accumulatedCallTime = 0;
 
-	private Logger logger = LoggerFactory.getLogger("API");
+	private Logger logger = LoggerFactory.getLogger("EXECUTION_TIME");
 
     @ManagedAttribute
     public void setEnabled(boolean enabled) {

@@ -37,7 +37,9 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 @Aspect
 public class ApiMonitoringAspect {
 
-    private Logger logger = LoggerFactory.getLogger("API");
+	private Logger apiLogger = LoggerFactory.getLogger("API");
+
+	private Logger timeLogger = LoggerFactory.getLogger("EXECUTION_TIME");
 
 	private ObjectMapper mapper = new ObjectMapper();
 
@@ -49,7 +51,7 @@ public class ApiMonitoringAspect {
     
     @Around("controllerBean() && methodPointcut() ")
     public Object afterMethodInControllerClass(ProceedingJoinPoint joinPoint) throws Throwable {
-    	logger.info("called: {}", joinPoint.getSignature());
+		apiLogger.info("called: {}", joinPoint.getSignature());
 		StopWatch sw = new StopWatch(joinPoint.toShortString());
 		mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
 
@@ -72,7 +74,7 @@ public class ApiMonitoringAspect {
 		} finally {
 			sw.stop();
 			synchronized (this) {
-				logger.info("{} : {}", joinPoint.toShortString(),
+				timeLogger.info("{} : {}", joinPoint.toShortString(),
 						sw.getTotalTimeMillis());
 			}
 		}
