@@ -23,6 +23,7 @@ import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.samples.petclinic.model.Owner;
 import org.springframework.samples.petclinic.service.ClinicService;
+import org.springframework.samples.petclinic.util.DumpToLogstash;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -65,7 +66,7 @@ public class OwnerController {
     }
 
     @RequestMapping(value = "/owners/new", method = RequestMethod.POST)
-    public String processCreationForm(@Valid Owner owner, BindingResult result, SessionStatus status) {
+    public String processCreationForm(@Valid @DumpToLogstash Owner owner, BindingResult result, SessionStatus status) {
         if (result.hasErrors()) {
             return "owners/createOrUpdateOwnerForm";
         } else {
@@ -76,13 +77,13 @@ public class OwnerController {
     }
 
     @RequestMapping(value = "/owners/find", method = RequestMethod.GET)
-    public String initFindForm(Map<String, Object> model) {
+    public String initFindForm(@DumpToLogstash Map<String, Object> model) {
         model.put("owner", new Owner());
         return "owners/findOwners";
     }
 
     @RequestMapping(value = "/owners", method = RequestMethod.GET)
-    public String processFindForm(Owner owner, BindingResult result, Map<String, Object> model) {
+    public String processFindForm(@DumpToLogstash Owner owner, BindingResult result, Map<String, Object> model) {
 
         // allow parameterless GET request for /owners to return all records
         if (owner.getLastName() == null) {
@@ -108,14 +109,14 @@ public class OwnerController {
     }
 
     @RequestMapping(value = "/owners/{ownerId}/edit", method = RequestMethod.GET)
-    public String initUpdateOwnerForm(@PathVariable("ownerId") int ownerId, Model model) {
+    public String initUpdateOwnerForm(@PathVariable("ownerId") @DumpToLogstash int ownerId, Model model) {
         Owner owner = this.clinicService.findOwnerById(ownerId);
         model.addAttribute(owner);
         return "owners/createOrUpdateOwnerForm";
     }
 
     @RequestMapping(value = "/owners/{ownerId}/edit", method = RequestMethod.PUT)
-    public String processUpdateOwnerForm(@Valid Owner owner, BindingResult result, SessionStatus status) {
+    public String processUpdateOwnerForm(@Valid @DumpToLogstash Owner owner, BindingResult result, SessionStatus status) {
         if (result.hasErrors()) {
             return "owners/createOrUpdateOwnerForm";
         } else {
@@ -132,7 +133,7 @@ public class OwnerController {
      * @return a ModelMap with the model attributes for the view
      */
     @RequestMapping("/owners/{ownerId}")
-    public ModelAndView showOwner(@PathVariable("ownerId") int ownerId) {
+    public ModelAndView showOwner(@DumpToLogstash @PathVariable("ownerId") int ownerId) {
         ModelAndView mav = new ModelAndView("owners/ownerDetails");
         mav.addObject(this.clinicService.findOwnerById(ownerId));
         return mav;

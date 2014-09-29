@@ -15,19 +15,23 @@
  */
 package org.springframework.samples.petclinic.util;
 
+import java.lang.annotation.Annotation;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
-import org.aspectj.lang.annotation.Before;
 import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.util.StopWatch;
 
-import com.fasterxml.jackson.databind.MapperFeature;
+import scala.annotation.meta.setter;
+
+import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
@@ -39,9 +43,12 @@ public class ApiMonitoringAspect {
 
 	private Logger apiLogger = LoggerFactory.getLogger("API");
 
-	private Logger timeLogger = LoggerFactory.getLogger("EXECUTION_TIME");
-
-	private ObjectMapper mapper = new ObjectMapper();
+	private final ObjectMapper mapper; 
+	
+	public ApiMonitoringAspect(){
+		mapper = new ObjectMapper();
+		mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+	}
 
     @Pointcut("within(@org.springframework.stereotype.Controller *)")
     public void controllerBean() {}
@@ -49,42 +56,47 @@ public class ApiMonitoringAspect {
     @Pointcut("execution(* *(..))")
     public void methodPointcut() {}
     
-    @Around("controllerBean() && methodPointcut() ")
+    @Pointcut("@annotation(org.springframework.web.bind.annotation.RequestMapping)")
+    public void requestMapping() {}
+    
+    @Around("controllerBean() && methodPointcut() && requestMapping()")
     public Object afterMethodInControllerClass(ProceedingJoinPoint joinPoint) throws Throwable {
-		apiLogger.info("called: {}", joinPoint.getSignature());
-		StopWatch sw = new StopWatch(joinPoint.toShortString());
-		mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-
+    	MDC.clear();
+        Map<String, Object> context = new HashMap<String, Object>();
 		Object[] args = joinPoint.getArgs();
-		String[] parameterNames = ((MethodSignature) joinPoint.getSignature()).getParameterNames();
-		Class[] parameterTypes = ((MethodSignature)joinPoint.getSignature()).getParameterTypes();
-		sw.start("invoke");
+		MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature(); 
+		String[] parameterNames = methodSignature.getParameterNames();
+		Object result = null;
+		Map<String, Object> target = new HashMap<String, Object>();
+		target.put("class", joinPoint.getTarget().getClass().getSimpleName());
+		target.put("package", joinPoint.getTarget().getClass().getPackage().getName());
+		target.put("method", methodSignature.getName());
+		MDC.put("target", mapper.writeValueAsString(target));
 		for (int i = 0; i < parameterNames.length; i++) {
-			Class type = parameterTypes[i];
-			if (type.getCanonicalName().startsWith(
-					"org.springframework.web.bind.")
-					|| type.getCanonicalName().startsWith(
-							"org.springframework.validation."))
-				continue;
-			// MDC.put(parameterNames[i], mapper.writeValueAsString(args[i]));
-			MDC.put(parameterNames[i], args[i].toString());
+			if(hasDumpAnnotation(methodSignature, i))
+			context.put(parameterNames[i], args[i]);
 		}
+		MDC.put("params", mapper.writeValueAsString(context));
 		try {
-    	return joinPoint.proceed();
-		} finally {
-			sw.stop();
-			synchronized (this) {
-				timeLogger.info("{} : {}", joinPoint.toShortString(),
-						sw.getTotalTimeMillis());
-			}
+			result = joinPoint.proceed();
+		} catch (Throwable t){
+			MDC.put("exception", t.getMessage());
+			apiLogger.info("failure: {}", joinPoint.getSignature());
+			throw t;
 		}
+		MDC.put("result", mapper.writeValueAsString(result));
+		apiLogger.info("called: {}", joinPoint.getSignature());
+		return result;
     }
-
-	public ObjectMapper getMapper() {
-		return mapper;
-	}
-
-	public void setMapper(ObjectMapper mapper) {
-		this.mapper = mapper;
-	}
+    
+    public boolean hasDumpAnnotation(MethodSignature signature, int parameterIndex){
+    	Annotation[] annotations = signature.getMethod().getParameterAnnotations()[parameterIndex];
+    	for(Annotation annotation : annotations){
+    		if(annotation instanceof DumpToLogstash){
+    			return true;
+    		}
+    	}
+    	return false;
+    	
+    }
 }
